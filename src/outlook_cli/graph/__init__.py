@@ -1,0 +1,1 @@
+"""Typed Microsoft Graph primitives."""

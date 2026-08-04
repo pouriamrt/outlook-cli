@@ -1,0 +1,19 @@
+{
+  "id": "AAMkAGI2NzNkY2I5LWFiY2QtMTIzNA==",
+  "subject": "Re: Q3 planning",
+  "bodyPreview": "Hi Pouria, thanks for the slides…",
+  "importance": "normal",
+  "isRead": false,
+  "hasAttachments": true,
+  "receivedDateTime": "2026-05-22T14:03:00Z",
+  "conversationId": "AAQkAGI2NzNkY2I5LWFiY2Q=",
+  "from": {
+    "emailAddress": {"name": "Alice", "address": "alice@example.com"}
+  },
+  "toRecipients": [
+    {"emailAddress": {"name": "Pouria", "address": "pouriamortezaagha7@gmail.com"}}
+  ],
+  "ccRecipients": [],
+  "flag": {"flagStatus": "flagged"},
+  "body": {"contentType": "html", "content": "<p>Hi Pouria, thanks…</p>"}
+}

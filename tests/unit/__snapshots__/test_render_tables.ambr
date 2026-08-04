@@ -1,0 +1,9 @@
+# serializer version: 1
+# name: test_renders_mail_list_with_index_column[mail_list_basic]
+  '''
+          #  Flags     From                                            Subject          Received                          
+          1  ●         Sender1                                         First            Fri May 22 06:00                  
+          2            Sender2                                         Second           Fri May 22 06:00                  
+  
+  '''
+# ---

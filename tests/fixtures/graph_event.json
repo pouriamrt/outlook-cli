@@ -1,0 +1,21 @@
+{
+  "id": "AAMkAGI2NzNkY2I5LWV2ZW50",
+  "subject": "Team sync",
+  "bodyPreview": "Weekly sync",
+  "start": {"dateTime": "2026-05-23T15:00:00.0000000", "timeZone": "UTC"},
+  "end": {"dateTime": "2026-05-23T15:30:00.0000000", "timeZone": "UTC"},
+  "isAllDay": false,
+  "isOnlineMeeting": true,
+  "onlineMeetingUrl": "https://teams.microsoft.com/l/meetup-join/...",
+  "location": {"displayName": "Online"},
+  "organizer": {"emailAddress": {"name": "Pouria", "address": "pouriamortezaagha7@gmail.com"}},
+  "attendees": [
+    {
+      "type": "required",
+      "status": {"response": "accepted", "time": "2026-05-22T10:00:00Z"},
+      "emailAddress": {"name": "Alice", "address": "alice@example.com"}
+    }
+  ],
+  "responseStatus": {"response": "organizer", "time": "0001-01-01T00:00:00Z"},
+  "body": {"contentType": "html", "content": "<p>Weekly sync</p>"}
+}
