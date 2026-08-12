@@ -33,11 +33,25 @@ OUTLOOK_LOGIN_URL = "https://outlook.cloud.microsoft/mail/"
 # We bypass all of this by encoding the payload into the URL hash (fragment)
 # and opening a new tab to localhost. The localhost page then reads its own hash
 # and POSTs it to the CLI.
+#
+# Only MSAL credential/account entries are sent. A web client can keep megabytes
+# of app state in localStorage; shipping all of it overflows the browser's URL
+# length limit and the fragment arrives truncated (JSONDecodeError mid-string).
+# The filter matches exactly what ``parse_msal_localstorage`` consumes —
+# RefreshToken, IdToken, and account entries — and skips AccessToken blobs.
+# Falls back to the full dump if nothing matches, in case MSAL's schema shifts.
 _BOOKMARKLET_TEMPLATE = (
-    "javascript:(function(){{"
-    "var d=JSON.stringify(Object.fromEntries(Object.entries(localStorage)));"
-    "window.open('http://127.0.0.1:{port}/auth#'+encodeURIComponent(d),'_blank');"
-    "}})()"
+    "javascript:(function(){"
+    "var o={},i,k,v;"
+    "for(i=0;i<localStorage.length;i++){"
+    "k=localStorage.key(i);v=localStorage.getItem(k);"
+    "if(v&&(v.indexOf('\"RefreshToken\"')>-1||v.indexOf('\"IdToken\"')>-1||"
+    "(v.indexOf('\"homeAccountId\"')>-1&&v.indexOf('\"username\"')>-1)))o[k]=v;"
+    "}"
+    "if(!Object.keys(o).length)o=Object.fromEntries(Object.entries(localStorage));"
+    "window.open('http://127.0.0.1:__PORT__/auth#'+"
+    "encodeURIComponent(JSON.stringify(o)),'_blank');"
+    "})()"
 )
 
 _AUTH_PAGE_HTML = """<html>
@@ -212,7 +226,8 @@ class BookmarkletAuthHandler(http.server.BaseHTTPRequestHandler):
             try:
                 self.server.captured_storage = json.loads(post_data.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                self.server.capture_error = str(e)
+                # Byte count makes a truncated fragment obvious in the error.
+                self.server.capture_error = f"{e} (received {len(post_data)} bytes)"
 
             self.send_response(200)
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -245,7 +260,7 @@ def capture_session_via_bookmarklet(
     if not server:
         raise UserError("Could not bind to a local port for the bookmarklet server.")
 
-    bookmarklet = _BOOKMARKLET_TEMPLATE.format(port=port)
+    bookmarklet = _BOOKMARKLET_TEMPLATE.replace("__PORT__", str(port))
 
     bar = "=" * 64
     print("", file=sys.stderr)

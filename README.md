@@ -84,8 +84,10 @@ The CLI prints a URL and a one-line JavaScript snippet, then walks you through:
 1. **Create a bookmarklet** — drag the provided snippet to your bookmarks bar.
 2. **Open** `https://outlook.cloud.microsoft/mail/` in your normal browser and sign in
    however your tenant requires. It's your real browser, so every corporate check passes.
-3. **Click the bookmarklet.** It posts your session state to a temporary localhost server
-   the CLI spins up, which sidesteps the page's Content Security Policy.
+3. **Click the bookmarklet.** It collects the MSAL credential and account entries from
+   localStorage — not the whole store, which can grow past the browser's URL length limit —
+   and posts them to a temporary localhost server the CLI spins up, which sidesteps the
+   page's Content Security Policy.
 4. The CLI parses the MSAL refresh token and writes it to
    `~/.config/outlook-cli/credentials.json` (mode `0600` on POSIX).
 
@@ -314,6 +316,11 @@ and a tenant policy can revoke them at any time.
 
 **Bookmarklet does nothing.** Make sure the active tab is `outlook.cloud.microsoft` when
 you click it, not your identity provider's page or `microsoftonline.com`.
+
+**"Unterminated string" while parsing the captured data.** The payload was truncated in
+transit. Re-create the bookmark from the *current* `outlook login` output — older versions
+dumped all of localStorage, which overflows the browser's URL length limit once the page
+accumulates enough app state.
 
 **TLS errors behind a corporate proxy.** `truststore` loads the OS certificate store, so
 a proxy's root CA is picked up automatically once it's installed system-wide.
