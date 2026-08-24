@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 
 from outlook_cli.config import http_verify
-from outlook_cli.graph.client import GraphClient, GraphError
+from outlook_cli.graph.client import GraphClient, GraphError, _default_base_url
 from outlook_cli.graph.models import Message
 
 _MESSAGE_SELECT = (
@@ -106,6 +106,17 @@ def read_thread(client: GraphClient, *, conversation_id: str) -> list[Message]:
 _INLINE_ATTACH_LIMIT = 3 * 1024 * 1024  # 3 MB
 
 
+def _file_attachment_type() -> str:
+    """Graph and Outlook REST v2.0 name the file-attachment type differently.
+
+    Sending Graph's name to outlook.office.com fails the whole request with
+    400 UnableToDeserializePostBody, because the type cannot be resolved.
+    """
+    if "graph.microsoft.com" in _default_base_url():
+        return "#microsoft.graph.fileAttachment"
+    return "#Microsoft.OutlookServices.FileAttachment"
+
+
 @dataclass
 class SendDraft:
     to: list[str]
@@ -140,7 +151,7 @@ def _build_message(draft: SendDraft) -> dict[str, Any]:
     if small:
         msg["attachments"] = [
             {
-                "@odata.type": "#microsoft.graph.fileAttachment",
+                "@odata.type": _file_attachment_type(),
                 "name": a.name,
                 "contentBytes": _base64.b64encode(a.read_bytes()).decode("ascii"),
             }
@@ -233,7 +244,7 @@ def reply_mail(client: GraphClient, draft: SendDraft, *, reply_all: bool) -> Non
             client.post(
                 f"/me/messages/{draft_id}/attachments",
                 json_body={
-                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "@odata.type": _file_attachment_type(),
                     "name": a.name,
                     "contentBytes": _base64.b64encode(a.read_bytes()).decode("ascii"),
                 },

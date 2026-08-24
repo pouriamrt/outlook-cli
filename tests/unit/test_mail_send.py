@@ -44,7 +44,28 @@ def test_send_mail_text_body_when_not_html() -> None:
     assert body["message"]["body"]["content"] == "plain text"
 
 
-def test_send_mail_inlines_small_attachment(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("api_base", "expected_type"),
+    [
+        (
+            "https://outlook.office.com/api/v2.0",
+            "#Microsoft.OutlookServices.FileAttachment",
+        ),
+        ("https://graph.microsoft.com/v1.0", "#microsoft.graph.fileAttachment"),
+    ],
+)
+def test_send_mail_inlines_small_attachment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    api_base: str,
+    expected_type: str,
+) -> None:
+    """The attachment type must match the API being addressed.
+
+    Sending Graph's name to outlook.office.com is rejected with
+    400 UnableToDeserializePostBody.
+    """
+    monkeypatch.setenv("OUTLOOK_CLI_API_BASE", api_base)
     f = tmp_path / "small.txt"
     f.write_bytes(b"hello")
     client = MagicMock()
@@ -53,7 +74,7 @@ def test_send_mail_inlines_small_attachment(tmp_path: Path) -> None:
     send_mail(client, draft)
     body = client.post.call_args.kwargs["json_body"]
     atts = body["message"]["attachments"]
-    assert atts[0]["@odata.type"] == "#microsoft.graph.fileAttachment"
+    assert atts[0]["@odata.type"] == expected_type
     assert atts[0]["name"] == "small.txt"
     assert base64.b64decode(atts[0]["contentBytes"]) == b"hello"
 

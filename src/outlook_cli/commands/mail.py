@@ -125,7 +125,7 @@ def _save_attachments(client: GraphClient, message_id: str, directory: str) -> N
     out_dir.mkdir(parents=True, exist_ok=True)
     resp = client.get(f"/me/messages/{message_id}/attachments")
     for att in resp.json().get("value", []):
-        if not att.get("@odata.type", "").endswith("#microsoft.graph.fileAttachment"):
+        if not att.get("@odata.type", "").lower().endswith("fileattachment"):
             continue
         # Strip any directory components from Graph-supplied filename
         raw_name = att.get("name") or ""
