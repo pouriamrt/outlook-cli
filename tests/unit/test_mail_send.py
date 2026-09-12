@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from outlook_cli.graph.client import GraphClient
 from outlook_cli.graph.mail import SendDraft, send_mail
 
 
@@ -44,37 +45,45 @@ def test_send_mail_text_body_when_not_html() -> None:
     assert body["message"]["body"]["content"] == "plain text"
 
 
-def test_send_mail_inlines_small_attachment(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("api_base", "expected_type"),
+    [
+        (
+            "https://outlook.office.com/api/v2.0",
+            "#Microsoft.OutlookServices.FileAttachment",
+        ),
+        ("https://graph.microsoft.com/v1.0", "#microsoft.graph.fileAttachment"),
+    ],
+)
+def test_send_mail_inlines_small_attachment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    api_base: str,
+    expected_type: str,
+) -> None:
+    """The attachment type must match the API being addressed.
+
+    Sending Graph's name to outlook.office.com is rejected with
+    400 UnableToDeserializePostBody.
+    """
+    monkeypatch.setenv("OUTLOOK_CLI_API_BASE", api_base)
     f = tmp_path / "small.txt"
     f.write_bytes(b"hello")
     client = MagicMock()
-    client.file_attachment_type = "#microsoft.graph.fileAttachment"
+    # Resolve through a real client so this exercises the mapping, not a stub.
+    client.file_attachment_type = GraphClient(token_provider=lambda _s: "t").file_attachment_type
     draft = _draft()
     draft.attachments = [f]
     send_mail(client, draft)
     body = client.post.call_args.kwargs["json_body"]
     atts = body["message"]["attachments"]
-    assert atts[0]["@odata.type"] == "#microsoft.graph.fileAttachment"
+    assert atts[0]["@odata.type"] == expected_type
     assert atts[0]["name"] == "small.txt"
     assert base64.b64decode(atts[0]["contentBytes"]) == b"hello"
 
 
-def test_send_mail_uses_client_attachment_discriminator(tmp_path: Path) -> None:
-    """Outlook REST v2.0 rejects the Graph type name with UnableToDeserializePostBody."""
-    f = tmp_path / "small.txt"
-    f.write_bytes(b"hello")
-    client = MagicMock()
-    client.file_attachment_type = "#Microsoft.OutlookServices.FileAttachment"
-    draft = _draft()
-    draft.attachments = [f]
-    send_mail(client, draft)
-    atts = client.post.call_args.kwargs["json_body"]["message"]["attachments"]
-    assert atts[0]["@odata.type"] == "#Microsoft.OutlookServices.FileAttachment"
-
-
 def test_client_picks_attachment_type_from_base_url() -> None:
-    from outlook_cli.graph.client import GraphClient
-
+    """An explicit base_url must win over the environment default."""
     outlook = GraphClient(
         token_provider=lambda _s: "t", base_url="https://outlook.office.com/api/v2.0"
     )
