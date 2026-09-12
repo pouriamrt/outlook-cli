@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 GRAPH_BASE_URL = "https://outlook.office.com/api/v2.0"
 
+# The two APIs name the same entity differently, and each rejects the other's
+# name with `UnableToDeserializePostBody`. _denormalize_keys PascalCases the
+# surrounding keys but leaves @-prefixed OData values alone, so the
+# discriminator has to be chosen per-base.
+GRAPH_FILE_ATTACHMENT = "#microsoft.graph.fileAttachment"
+OUTLOOK_REST_FILE_ATTACHMENT = "#Microsoft.OutlookServices.FileAttachment"
+
 
 def _default_base_url() -> str:
     """Resolve the API base URL, honouring ``OUTLOOK_CLI_API_BASE``.
@@ -73,6 +80,11 @@ class GraphClient:
         resolved_base = base_url if base_url is not None else _default_base_url()
         self._is_outlook_rest = _is_outlook_rest_base(resolved_base)
         self._client = httpx.Client(base_url=resolved_base, timeout=timeout, verify=http_verify())
+
+    @property
+    def file_attachment_type(self) -> str:
+        """The `@odata.type` this client's API expects for a file attachment."""
+        return OUTLOOK_REST_FILE_ATTACHMENT if self._is_outlook_rest else GRAPH_FILE_ATTACHMENT
 
     def _prep_body(self, json_body: Any) -> Any:
         """PascalCase keys when targeting Outlook REST; leave Graph payloads as-is."""

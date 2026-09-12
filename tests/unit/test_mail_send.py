@@ -48,6 +48,7 @@ def test_send_mail_inlines_small_attachment(tmp_path: Path) -> None:
     f = tmp_path / "small.txt"
     f.write_bytes(b"hello")
     client = MagicMock()
+    client.file_attachment_type = "#microsoft.graph.fileAttachment"
     draft = _draft()
     draft.attachments = [f]
     send_mail(client, draft)
@@ -56,6 +57,30 @@ def test_send_mail_inlines_small_attachment(tmp_path: Path) -> None:
     assert atts[0]["@odata.type"] == "#microsoft.graph.fileAttachment"
     assert atts[0]["name"] == "small.txt"
     assert base64.b64decode(atts[0]["contentBytes"]) == b"hello"
+
+
+def test_send_mail_uses_client_attachment_discriminator(tmp_path: Path) -> None:
+    """Outlook REST v2.0 rejects the Graph type name with UnableToDeserializePostBody."""
+    f = tmp_path / "small.txt"
+    f.write_bytes(b"hello")
+    client = MagicMock()
+    client.file_attachment_type = "#Microsoft.OutlookServices.FileAttachment"
+    draft = _draft()
+    draft.attachments = [f]
+    send_mail(client, draft)
+    atts = client.post.call_args.kwargs["json_body"]["message"]["attachments"]
+    assert atts[0]["@odata.type"] == "#Microsoft.OutlookServices.FileAttachment"
+
+
+def test_client_picks_attachment_type_from_base_url() -> None:
+    from outlook_cli.graph.client import GraphClient
+
+    outlook = GraphClient(
+        token_provider=lambda _s: "t", base_url="https://outlook.office.com/api/v2.0"
+    )
+    graph = GraphClient(token_provider=lambda _s: "t", base_url="https://graph.microsoft.com/v1.0")
+    assert outlook.file_attachment_type == "#Microsoft.OutlookServices.FileAttachment"
+    assert graph.file_attachment_type == "#microsoft.graph.fileAttachment"
 
 
 def test_save_as_draft_uses_messages_endpoint() -> None:

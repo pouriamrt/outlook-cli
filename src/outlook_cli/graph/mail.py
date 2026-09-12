@@ -124,7 +124,7 @@ def _addr_list(addrs: list[str]) -> list[dict[str, Any]]:
     return [{"emailAddress": {"address": a}} for a in addrs]
 
 
-def _build_message(draft: SendDraft) -> dict[str, Any]:
+def _build_message(draft: SendDraft, *, attachment_type: str) -> dict[str, Any]:
     msg: dict[str, Any] = {
         "subject": draft.subject,
         "body": {
@@ -140,7 +140,7 @@ def _build_message(draft: SendDraft) -> dict[str, Any]:
     if small:
         msg["attachments"] = [
             {
-                "@odata.type": "#microsoft.graph.fileAttachment",
+                "@odata.type": attachment_type,
                 "name": a.name,
                 "contentBytes": _base64.b64encode(a.read_bytes()).decode("ascii"),
             }
@@ -186,7 +186,10 @@ def send_mail(client: GraphClient, draft: SendDraft) -> str | None:
     """Send a message (or save as draft). Returns message_id when save_as_draft is True."""
     large = [a for a in draft.attachments if a.stat().st_size > _INLINE_ATTACH_LIMIT]
     if draft.save_as_draft or large:
-        created = client.post("/me/messages", json_body=_build_message(draft))
+        created = client.post(
+            "/me/messages",
+            json_body=_build_message(draft, attachment_type=client.file_attachment_type),
+        )
         message_id: str = created.json()["id"]
         if large:
             _upload_large_attachments(client, message_id, large)
@@ -195,7 +198,10 @@ def send_mail(client: GraphClient, draft: SendDraft) -> str | None:
         return message_id
     client.post(
         "/me/sendMail",
-        json_body={"message": _build_message(draft), "saveToSentItems": True},
+        json_body={
+            "message": _build_message(draft, attachment_type=client.file_attachment_type),
+            "saveToSentItems": True,
+        },
     )
     return None
 
@@ -233,7 +239,7 @@ def reply_mail(client: GraphClient, draft: SendDraft, *, reply_all: bool) -> Non
             client.post(
                 f"/me/messages/{draft_id}/attachments",
                 json_body={
-                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "@odata.type": client.file_attachment_type,
                     "name": a.name,
                     "contentBytes": _base64.b64encode(a.read_bytes()).decode("ascii"),
                 },
