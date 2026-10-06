@@ -124,6 +124,7 @@ def _save_attachments(client: GraphClient, message_id: str, directory: str) -> N
     out_dir = _Path(directory).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     resp = client.get(f"/me/messages/{message_id}/attachments")
+    used: set[str] = set()
     for att in resp.json().get("value", []):
         # Graph says "#microsoft.graph.fileAttachment", Outlook REST v2.0 says
         # "#Microsoft.OutlookServices.FileAttachment". Match either, or saving
@@ -138,6 +139,11 @@ def _save_attachments(client: GraphClient, message_id: str, directory: str) -> N
         raw_bytes = att.get("contentBytes")
         if not raw_bytes:
             continue
+        # Outlook names every pasted inline image "image.png"; suffix repeats
+        stem, suffix, n = _Path(safe_name).stem, _Path(safe_name).suffix, 2
+        while safe_name in used:
+            safe_name, n = f"{stem}-{n}{suffix}", n + 1
+        used.add(safe_name)
         dest = (out_dir / safe_name).resolve()
         # Defense-in-depth: refuse to write outside out_dir
         try:

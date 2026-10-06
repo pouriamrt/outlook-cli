@@ -56,3 +56,15 @@ def test_save_attachments_skips_non_file_attachments(tmp_path: Path) -> None:
     _save_attachments(client, "MSG-1", str(tmp_path))
     assert (tmp_path / "real.txt").exists()
     assert not (tmp_path / "ref.eml").exists()
+
+
+def test_save_attachments_keeps_duplicate_names(tmp_path: Path) -> None:
+    # Outlook names every pasted inline image "image.png"
+    client = MagicMock()
+    client.get.return_value.json.return_value = {
+        "value": [_att("image.png", "YQ=="), _att("image.png", "Yg=="), _att("image.png", "Yw==")]
+    }
+    _save_attachments(client, "MSG-1", str(tmp_path))
+    assert (tmp_path / "image.png").read_bytes() == b"a"
+    assert (tmp_path / "image-2.png").read_bytes() == b"b"
+    assert (tmp_path / "image-3.png").read_bytes() == b"c"
