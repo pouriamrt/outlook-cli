@@ -30,7 +30,7 @@ never make raw Graph/Outlook HTTP calls, never browse the web for their mail.
 ## Pre-flight (run before any other command)
 
 ```bash
-outlook whoami --json
+outlook --json whoami
 ```
 
 | Exit | What it means | What you do |
@@ -59,7 +59,7 @@ the `cal` cache).
 
 **`--since` accepts**: `"7d"`, `"2h"`, `"yesterday"`, ISO datetime, or natural language ("monday").
 
-**`mail list` filters compose with AND** — `--unread --from alice --since 3d` returns unread messages from Alice in the last 3 days.
+**`mail list` filters compose with AND** — `--unread --from alice@example.com --since 3d` returns unread messages from Alice in the last 3 days. `--from` matches the full sender address exactly; to find mail by a name or partial address, use `mail search "from:alice"`.
 
 **KQL operators for `mail search`**: `from:` `to:` `cc:` `subject:` `body:`
 `hasattachment:true` `received>=2026-05-01` `kind:meetings` `importance:high`.
