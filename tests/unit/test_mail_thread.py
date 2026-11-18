@@ -34,5 +34,7 @@ def test_read_thread_filters_by_conversation_id_and_orders() -> None:
     msgs = read_thread(client, conversation_id="CV")
     args, kwargs = client.get.call_args
     assert "conversationId eq 'CV'" in kwargs["params"]["$filter"]
+    # Exchange 400s (InefficientFilter) unless the $orderby property leads $filter.
+    assert kwargs["params"]["$filter"].startswith("receivedDateTime ge ")
     assert msgs[0].body_html == "first"
     assert msgs[1].body_html == "second"

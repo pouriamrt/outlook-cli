@@ -94,7 +94,7 @@ def read_thread(client: GraphClient, *, conversation_id: str) -> list[Message]:
     resp = client.get(
         "/me/messages",
         params={
-            "$filter": f"conversationId eq '{escaped}'",
+            "$filter": f"receivedDateTime ge {_NO_SINCE} and conversationId eq '{escaped}'",
             "$orderby": "receivedDateTime asc",
             "$top": 100,
             "$select": _MESSAGE_SELECT + ",body",
