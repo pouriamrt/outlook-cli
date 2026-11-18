@@ -18,6 +18,7 @@ _MESSAGE_SELECT = (
     "id,subject,from,toRecipients,ccRecipients,receivedDateTime,"
     "isRead,flag,hasAttachments,importance,bodyPreview,conversationId"
 )
+_NO_SINCE = "1900-01-01T00:00:00Z"  # matches every message; only there to lead $filter
 
 
 @dataclass
@@ -49,9 +50,10 @@ def build_list_params(f: MailListFilters) -> dict[str, Any]:
     if f.subject:
         escaped = f.subject.replace("'", "''")
         clauses.append(f"contains(subject, '{escaped}')")
-    if f.since:
-        iso = f.since.strftime("%Y-%m-%dT%H:%M:%SZ")
-        clauses.append(f"receivedDateTime ge {iso}")
+    if clauses or f.since:
+        # Exchange 400s (InefficientFilter) unless the $orderby property leads $filter.
+        floor = f.since.strftime("%Y-%m-%dT%H:%M:%SZ") if f.since else _NO_SINCE
+        clauses.insert(0, f"receivedDateTime ge {floor}")
     params: dict[str, Any] = {
         "$top": f.top,
         "$orderby": "receivedDateTime desc",
